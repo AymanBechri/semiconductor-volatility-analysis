@@ -46,6 +46,11 @@ L'ordinamento di Cholesky scelto riflette in modo stringente la struttura della 
 
 L'IRF ci permette di analizzare la direzione, la persistenza e il tempo di riassorbimento dell'effetto di uno shock su una determinata variabile. Applicando questo strumento al nostro modello, si osservano le seguenti dinamiche di trasmissione lungo la catena di fornitura:
 
+<p align="center">
+  <img width="723" height="443" alt="e0582d83-5504-42b9-a27c-2e04bcfb9c0c" src="https://github.com/user-attachments/assets/85f6ae94-0ef7-4437-b938-dc247b7e99eb" />
+</p>
+
+
 **1. Shock generati da Linde (LIN)**
 * **Impatto su LIN stessa:** Uno shock LIN su LIN mostra un picco altissimo, prossimo a 3.0 alla settimana 0, subendo poi un ritracciamento negativo in area -0.22 alla settimana 1 per poi annullarsi. Il mercato azionario assorbe l'informazione in modo efficiente e rapidissimo.
 * **Impatto su TOELY e SSNLF:** La trasmissione a valle presenta un forte impatto contemporaneo. TOELY registra un balzo esplosivo di oltre 2.0 al tempo 0 (azzerandosi quasi istantaneamente nella settimana 1), mentre SSNLF sale a circa 1.4 al tempo 0, per poi spegnersi linearmente. Questo dimostra come la chimica di base guidi prepotentemente il destino del resto della filiera.
@@ -107,3 +112,121 @@ Sebbene la differenza quantitativa non sia drammatica, il VaR calcolato mediante
 
 1. Il modello univariato calcola il rischio utilizzando i rendimenti storici "grezzi", che mescolano le normali e prevedibili oscillazioni quotidiane con i veri shock imprevedibili. Questa metodologia rischia di sottostimare l'esposizione al rischio nei momenti di apparente stabilità autoregressiva. Il modello multivariato, al contrario, funziona come un filtro che pulisce i dati dalle tendenze legate al passato (le dinamiche autoregressive attese) per estrarre esclusivamente le turbolenze "a sorpresa" che il mercato non poteva in alcun modo anticipare. Concentrandosi unicamente su questi movimenti improvvisi (i puri residui del VAR estratti al Punto 3), il modello fa emergere volatilità marginali lievemente superiori e più realistiche, portando in emersione rischi nascosti che nell'approccio univariato finivano per essere diluiti dalle fluttuazioni ordinarie.
 2. Calcolare le correlazioni sulla base dei soli shock, anziché sull'intera serie dei rendimenti, permette di isolare il comportamento dei titoli in condizioni di stress. Nei periodi di calma o di ordinaria stabilità, infatti, l'approccio univariato spalma le correlazioni sull'intero periodo storico, diluendo i momenti di crisi. Al contrario, la matrice di correlazione estratta dai residui del VAR cattura i co-movimenti "istantanei": quando il mercato subisce uno shock macro o strutturale sulla catena del valore (come descritto nel punto 2 dalle IRF), i titoli tendono a subire contrazioni sincrone e a muoversi in modo coeso. Questa dinamica aumenta la correlazione percepita durante gli eventi avversi, indebolendo il beneficio della diversificazione settoriale ed evitando che i giorni di stabilità vadano a mitigare la reale percezione del rischio, spingendo così la stima multivariata su livelli più elevati e conservativi.
+
+
+
+
+## Time Series Statistical Analysis and Conditional Variance Modeling
+
+The first step of our analysis involved the Augmented Dickey-Fuller test to check the stationarity of the series, which is crucial to avoid spurious regressions and ensure the efficiency of estimators in subsequent models (such as AR and VAR). The p-values recorded for the returns of Linde (LIN), Tokyo Electron (TOELY), and Samsung Electronics (SSNLF) were all below 0.05, leading to the rejection of the null hypothesis of a unit root and confirming their stationarity.
+
+Subsequently, the normality of the distribution was analyzed using the Jarque-Bera test. Here too, the results led to the rejection of the null hypothesis of a normal distribution for all series. This indicates the presence of asymmetry and high kurtosis in the historical data. This can be explained by the fact that in financial markets, particularly in the semiconductor sector, sudden price gaps often occur due to geopolitical dynamics, tariffs, or sudden technological breakthroughs. This dynamic generates a typically leptokurtic distribution, characterized by heavy tails and a very pronounced peak at the mean value.
+
+To model the mean, all series were fitted with a first-order autoregressive process, an AR(1). This choice allows us to capture and filter out any serial autocorrelation in the returns, ensuring that the subsequent heteroskedasticity analysis is performed on pure residuals free from short-term dynamics. To verify the validity of the AR(1) model, a Ljung-Box test was performed on the standardized residuals. This test is essential to check for residual autocorrelation, which would make the estimators inefficient and biased. The null hypothesis implies no residual serial autocorrelation. The results validated the filter used: the p-values were 0.6589 for LIN, 0.7342 for TOELY, and 0.5303 for SSNLF. Since these values are well above the 5% significance level, there are no grounds to reject the null hypothesis.
+
+Next, we tested for the presence of autoregressive conditional heteroskedasticity using the ARCH test on the residuals. The evidence led to the rejection of the null hypothesis of homoscedasticity, confirming the presence of volatility clustering, a necessary condition to estimate ARCH and GARCH family models. Therefore, several specifications were compared (ARCH(1), ARCH(2), GARCH(1,1), GARCH(1,2), GARCH(2,1), GARCH(2,2)). The optimal model was selected by minimizing the Bayesian Information Criterion (BIC), which effectively penalizes over-parameterization.
+
+| Conditional Structure | BIC LIN | BIC TOELY | BIC SSNLF |
+| :--- | :--- | :--- | :--- |
+| GARCH(1,1) Model | 3540.02 | 4448.22 | 3936.34 |
+
+For all three assets, the GARCH(1,1) model was strictly dominant. Final diagnostics confirmed the effectiveness of the joint modeling: re-applying the ARCH test on the standardized residuals of the GARCH(1,1) model, the null hypothesis of homoscedasticity is no longer rejected. The recorded p-values were 0.9136 for LIN, 0.7219 for TOELY, and 0.5492 for SSNLF, definitively proving that the initial heteroskedasticity was completely absorbed by the model.
+
+---
+
+### Return Volatility Forecasts
+
+Below are the expected volatility forecasts (conditional standard deviation, $\hat{\sigma}_{T+h}$) over a 3-week horizon for each asset:
+
+| Asset | Week 1 ($\hat{\sigma}_{T+1}$) | Week 2 ($\hat{\sigma}_{T+2}$) | Week 3 ($\hat{\sigma}_{T+3}$) |
+| :--- | :--- | :--- | :--- |
+| **LIN** | 2.4927 | 2.5323 | 2.5682 |
+| **TOELY** | 4.9834 | 5.0119 | 5.0368 |
+| **SSNLF** | 3.7180 | 3.7134 | 3.7091 |
+
+The data shows that TOELY is inherently the most volatile asset, followed by SSNLF and LIN. The projections for LIN and TOELY show a slight upward trajectory, suggesting an accumulation of uncertainty, while SSNLF displays a slight but steady downward volatility path toward its unconditional mean.
+
+---
+
+## The VAR Model and Cholesky Ordering
+
+To analyze the simultaneous transmission of shocks among the three assets, a Vector Autoregressive (VAR) model with one lag (p=1) was estimated. Because the variance-covariance matrix of the reduced-form residuals showed non-zero cross-correlations, a structural identification was necessary to isolate pure shocks.
+
+The chosen Cholesky ordering strictly reflects the structure of the semiconductor production value chain: **LIN $\rightarrow$ TOELY $\rightarrow$ SSNLF**.
+
+* **LIN (Linde):** Operates upstream by supplying basic chemical materials and industrial gases. Its shock is considered exogenous and propagates instantly throughout the chain.
+* **TOELY (Tokyo Electron):** Midstream supplier of machinery and equipment. It depends on basic materials (LIN) and reacts to its shocks, but transfers its own uncertainty to downstream final producers.
+* **SSNLF (Samsung Electronics):** Downstream consumer electronics and foundry. It absorbs shocks from the entire supply chain, but its shocks do not instantly affect upstream suppliers.
+
+---
+
+### Impulse Response Functions (IRF)
+
+The IRF allows us to analyze the direction, persistence, and absorption time of a shock's effect on a given variable. Applying this tool to our model, the following transmission dynamics along the supply chain are observed:
+
+<p align="center">
+  <img width="723" height="443" alt="e0582d83-5504-42b9-a27c-2e04bcfb9c0c" src="https://github.com/user-attachments/assets/85f6ae94-0ef7-4437-b938-dc247b7e99eb" />
+</p>
+
+
+**1. Shocks generated by Linde (LIN)**
+* **Impact on LIN itself:** A LIN shock on LIN shows a very high peak, close to 3.0 at week 0, then undergoes a negative retracement around -0.22 at week 1 before dying out. The stock market absorbs the information very efficiently and rapidly.
+* **Impact on TOELY and SSNLF:** The downstream transmission has a strong contemporaneous impact. TOELY records an explosive jump of over 2.0 at time 0 (zeroing out almost instantly in week 1), while SSNLF rises to about 1.4 at time 0, before fading linearly. This demonstrates how base chemistry strongly dictates the fate of the rest of the supply chain.
+
+**2. Shocks generated by Tokyo Electron (TOELY)**
+* **Impact on TOELY itself:** A TOELY shock on TOELY shows a massive increase of about 4.75 at time 0, immediately correcting towards neutrality in subsequent periods.
+* **Impact on SSNLF:** A TOELY shock generates a strong downstream contemporaneous response on SSNLF, with an impact of about 0.96 at period 0, before collapsing to -0.033 in week 2. This shows that the machinery builder unquestionably sets the technological pace for the final foundry.
+* **Impact on LIN:** By construction, a TOELY shock on LIN presents a zero effect at time zero. In weeks 1 and 2, only negligible and fluctuating variations are observed (between 0.09 and -0.014). Machinery engineering lacks the leverage to permanently alter the dynamics of the upstream supplier.
+
+**3. Shocks generated by Samsung Electronics (SSNLF)**
+* **Impact on SSNLF itself:** The increase is powerful, exceeding 3.0 at time 0, followed by a negative variation of -0.29 in week 1, before stabilizing at zero.
+* **Impact on LIN and TOELY:** Beyond the zero impact at time 0 imposed by the model's structure, the backward transmission generates only short-lived noise. In week 1, the shock on LIN slides slightly below zero (-0.06) and then rebounds to 0.017, while TOELY sees an asynchronous jump to 0.327 followed by negative fluctuations. This certifies that asymmetric risk flows from supplier to buyer, and not vice versa.
+
+---
+
+### Forecast Error Variance Decomposition (FEVD)
+
+The following table reports the Forecast Error Variance Decomposition at the 16th week:
+
+| Variable | LIN Shock (%) | TOELY Shock (%) | SSNLF Shock (%) |
+| :--- | :--- | :--- | :--- |
+| **LIN Variance** | 99.87% | 0.09% | 0.04% |
+| **TOELY Variance** | 16.18% | 83.42% | 0.40% |
+| **SSNLF Variance** | 14.22% | 7.52% | 78.25% |
+
+The FEVD results empirically demonstrate the dynamics of the supply chain: LIN is a completely exogenous stock, with its variance dictated 99.87% by its own dynamics. TOELY maintains strong autonomy (83.42%), but absorbs a notable 16.18% of uncertainty from base materials. Finally, SSNLF proves to be the most exposed link: although 78.25% of its volatility is idiosyncratic, over 21% of its long-term risk is "imported" from the instability of its suppliers (LIN and TOELY).
+
+---
+
+## GARCH Models on VAR Residuals (Reduced-form Shocks)
+
+For the multivariate approach to risk, the reduced-form residuals were extracted from the VAR model (the unexpected shocks stripped of mean autocorrelation). On these three series as well, the ARCH test revealed strong heteroskedasticity. Applying the same BIC minimization procedure used in the first step, the **GARCH(1,1)** was once again confirmed as the optimal model for all structural components.
+
+| Shock | Week 1 ($\hat{\sigma}_{sh,1}$) | Week 2 ($\hat{\sigma}_{sh,2}$) | Week 3 ($\hat{\sigma}_{sh,3}$) |
+| :--- | :--- | :--- | :--- |
+| **LIN Shock** | 2.5161 | 2.5512 | 2.5831 |
+| **TOELY Shock** | 5.0009 | 5.0245 | 5.0454 |
+| **SSNLF Shock** | 3.7658 | 3.7605 | 3.7554 |
+
+The volatility forecasts on pure shocks show slightly higher values compared to the estimates made on the raw returns in step 1. This happens because the variance isolated from the VAR quantifies the uncertainty of market "surprises," purged of any predictable trend.
+
+---
+
+## Comparison Between Univariate and Multivariate VaR Models
+
+The analysis proceeds with the estimation of the Value at Risk (VaR), which quantifies the maximum potential loss over a one-week time horizon at a 95% confidence level. The reference portfolio has a value of $300, divided equally ($100) among the three stocks. Assuming a normal distribution, the calculation employs the standard normal quantile $z=1.6449$.
+
+The two approaches differ in the construction of the portfolio's variance-covariance matrix:
+
+1. **Univariate Approach:** Uses the $\hat{\sigma}_{T+1}$ estimates extracted from the AR-GARCH models on returns (Step 1) combined with the *unconditional historical correlation* matrix of the returns.
+2. **Multivariate Approach:** Uses the $\hat{\sigma}_{sh,1}$ estimates obtained from the GARCH on shocks (Step 3) combined with the *implied covariance matrix of the VAR residuals*, capturing the pure correlation of simultaneous unexpected shocks.
+
+| Model | VaR (USD Dollars) | VaR (Percentage %) |
+| :--- | :--- | :--- |
+| **Univariate VaR (AR-GARCH)** | $ 14.34 | 4.78% |
+| **Multivariate VaR (VAR-GARCH)** | $ 14.50 | 4.83% |
+
+Although the quantitative difference is not drastic, the VaR calculated using the multivariate approach is systematically higher ($14.50 vs. $14.34). The difference between the two methods stems from two fundamental choices:
+
+1. The univariate model calculates risk using "raw" historical returns, which mix normal, predictable daily fluctuations with true unpredictable shocks. This methodology risks underestimating risk exposure during times of apparent autoregressive stability. The multivariate model, conversely, acts as a filter that cleanses the data of past trends (expected autoregressive dynamics) to extract only the "surprise" turbulence that the market could not anticipate in any way. By focusing solely on these sudden movements (the pure VAR residuals extracted in Step 3), the model surfaces slightly higher and more realistic marginal volatilities, bringing to light hidden risks that would end up being diluted by ordinary fluctuations in the univariate approach.
+2. Calculating correlations based solely on shocks, rather than on the entire series of returns, allows us to isolate the behavior of stocks under stress conditions. In periods of calm or ordinary stability, the univariate approach spreads correlations over the entire historical period, diluting moments of crisis. In contrast, the correlation matrix extracted from VAR residuals captures "instantaneous" co-movements: when the market suffers a macro or structural shock on the value chain (as described by the IRFs in Step 2), the stocks tend to undergo synchronous contractions and move cohesively. This dynamic increases the perceived correlation during adverse events, weakening the benefit of sector diversification and preventing days of stability from mitigating the true perception of risk, thereby pushing the multivariate estimate to higher and more conservative levels.
