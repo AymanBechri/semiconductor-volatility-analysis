@@ -1,0 +1,764 @@
+dati = readmatrix("dati_semiconduttori_2.xlsx"); % ho convertito il dataset da csv ad xlsx per comodità
+data_excel = dati(:,1);
+lin = dati(:,2);
+toely = dati(:,3);
+ssnlf = dati(:,4);
+data = datetime(data_excel, 'ConvertFrom', 'excel');
+
+% Verifiche stastistiche LIN
+[jb_rifiuta_lin, jb_pvalue_lin] = jbtest(lin);  
+[adf_rifiuta_lin, adf_pvalue_lin] = adftest(lin);  
+[arch_rifiuta_lin, arch_pvalue_lin] = archtest(lin, 'Lags', 15);
+
+% Verifiche stastistiche TOELY
+[jb_rifiuta_toely, jb_pvalue_toely] = jbtest(toely);
+[adf_rifiuta_toely, adf_pvalue_toely] = adftest(toely);  
+[arch_rifiuta_toely, arch_pvalue_toely] = archtest(toely, 'Lags', 15);
+
+% Verifiche stastistiche SSNLF
+[jb_rifiuta_ssnlf, jb_pvalue_ssnlf] = jbtest(ssnlf);
+[adf_rifiuta_ssnlf, adf_pvalue_ssnlf] = adftest(ssnlf);  
+[arch_rifiuta_ssnlf, arch_pvalue_ssnlf] = archtest(ssnlf, 'Lags', 15);
+
+disp('************************************************************')
+disp('Modello AR1 per i rendimenti')
+disp('************************************************************')
+
+% Modello AR(1) per i rendimenti LIN + Test di Ljung Box
+y_lin = lin(2:end);
+yrit_lin = lin(1:end-1); 
+T = size(y_lin,1);
+X = [ones(T,1) yrit_lin];
+beta_lin = inv(X'*X)*X'*y_lin;
+res_lin = y_lin - X*beta_lin;
+h_lin = lbqtest(res_lin) 
+[h_lin,pValue_lin] = lbqtest(res_lin)
+
+% Modello AR(1) per i rendimenti TOELY + Test di Ljung Box
+y_toely = toely(2:end);
+yrit_toely = toely(1:end-1);
+T = size(y_toely,1);
+X = [ones(T,1) yrit_toely];
+beta_toely = inv(X'*X)*X'*y_toely;
+res_toely = y_toely - X*beta_toely;
+h_toely = lbqtest(res_toely)
+[h_toely,pValue_toely] = lbqtest(res_toely)
+
+% Modello AR(1) per i rendimenti SSNLF + Test di Ljung Box
+y_ssnlf = ssnlf(2:end);
+yrit_ssnlf = ssnlf(1:end-1);
+T = size(y_ssnlf,1);
+X = [ones(T,1) yrit_ssnlf];
+beta_ssnlf = inv(X'*X)*X'*y_ssnlf;
+res_ssnlf = y_ssnlf - X*beta_ssnlf;
+h_ssnlf = lbqtest(res_ssnlf)
+[h_ssnlf,pValue_ssnlf] = lbqtest(res_ssnlf)
+
+disp('************************************************************')
+disp('Modelli ARCH e GARCH per i rendimenti')
+disp('************************************************************')
+figure('Name', 'Modelli di Volatilità LIN', 'NumberTitle', 'off');
+disp('Modelli di Volatilita LIN')
+
+% Stimiamo un AR(1)-ARCH(1) LIN
+disp('Modello ARCH(1) LIN')
+y_lin=lin;
+arch_mod_lin = arima('ARLags', 1, 'Variance', garch(0,1));
+arch_stima_lin = estimate(arch_mod_lin,y_lin, 'Display','off');
+summarize(arch_stima_lin);
+[res_arch_lin, sigma2_arch_lin] = infer(arch_stima_lin,y_lin); 
+sigma_arch_lin = sqrt(sigma2_arch_lin);
+subplot(3,2,1) 
+plot(data,sigma_arch_lin, 'Color', 'red')
+title("Arch(1) LIN")
+z_arch_lin = res_arch_lin./sigma_arch_lin;
+[z_arch_rifiuta_lin, z_arch_pvalue_lin] = archtest(z_arch_lin, 'Lags', 15);
+
+% Stimiamo un AR(1)-ARCH(2) LIN
+disp('Modello ARCH(2) LIN')
+arch2_mod_lin = arima('ARLags', 1, 'Variance', garch(0,2));
+arch2_stima_lin = estimate(arch2_mod_lin,y_lin, "Display","off");
+summarize(arch2_stima_lin);
+[res_arch2_lin, sigma2_arch2_lin] = infer(arch2_stima_lin,y_lin); 
+sigma_arch2_lin = sqrt(sigma2_arch2_lin);
+subplot(3,2,2) 
+plot(data,sigma_arch2_lin, 'Color', 'red')
+title("Arch(2) LIN")
+z_arch2_lin = res_arch2_lin./sigma_arch2_lin;
+[z_arch2_rifiuta_lin, z_arch2_pvalue_lin] = archtest(z_arch2_lin, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(1,1) LIN
+disp('Modello GARCH(1,1) LIN')
+garch_mod_lin= arima('ARLags', 1, 'Variance', garch(1,1));
+garch_stima_lin = estimate(garch_mod_lin,y_lin, "Display","off");
+summarize(garch_stima_lin);
+[res_garch_lin, sigma2_garch_lin] = infer(garch_stima_lin,y_lin); 
+sigma_garch_lin = sqrt(sigma2_garch_lin);
+subplot(3,2,3) 
+plot(data,sigma_garch_lin, 'Color', 'red')
+title("GARCH(1,1) LIN")
+z_garch_lin = res_garch_lin./sigma_garch_lin;
+[z_garch_rifiuta_lin, z_garch_pvalue_lin] = archtest(z_garch_lin, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(1,2) LIN
+disp('Modello GARCH(1,2) LIN')
+garch12_mod_lin= arima('ARLags', 1, 'Variance', garch(1,2));
+garch12_stima_lin = estimate(garch12_mod_lin,y_lin, "Display","off");
+summarize(garch12_stima_lin);
+[res_garch12_lin, sigma2_garch12_lin] = infer(garch12_stima_lin,y_lin); 
+sigma_garch12_lin = sqrt(sigma2_garch12_lin);
+subplot(3,2,4) 
+plot(data,sigma_garch12_lin, 'Color', 'red')
+title("GARCH(1,2) LIN")
+z_garch12_lin = res_garch12_lin./sigma_garch12_lin;
+[z_garch12_rifiuta_lin, z_garch12_pvalue_lin] = archtest(z_garch12_lin, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(2,1) LIN
+disp('Modello GARCH(2,1) LIN')
+garch21_mod_lin= arima('ARLags', 1, 'Variance', garch(2,1));
+garch21_stima_lin = estimate(garch21_mod_lin,y_lin, "Display","off");
+summarize(garch21_stima_lin);
+[res_garch21_lin, sigma2_garch21_lin] = infer(garch21_stima_lin,y_lin); 
+sigma_garch21_lin = sqrt(sigma2_garch21_lin);
+subplot(3,2,5) 
+plot(data,sigma_garch21_lin, 'Color', 'red')
+title("GARCH(2,1) LIN")
+z_garch21_lin = res_garch21_lin./sigma_garch21_lin;
+[z_garch21_rifiuta_lin, z_garch21_pvalue_lin] = archtest(z_garch21_lin, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(2,2) LIN
+disp('Modello GARCH(2,2) LIN')
+garch22_mod_lin= arima('ARLags', 1, 'Variance', garch(2,2));
+garch22_stima_lin = estimate(garch22_mod_lin,y_lin, "Display","off");
+summarize(garch22_stima_lin);
+[res_garch22_lin, sigma2_garch22_lin] = infer(garch22_stima_lin,y_lin); 
+sigma_garch22_lin = sqrt(sigma2_garch22_lin);
+subplot(3,2,6) 
+plot(data,sigma_garch22_lin, 'Color', 'red')
+title("GARCH(2,2) LIN")
+z_garch22_lin = res_garch22_lin./sigma_garch22_lin;
+[z_garch22_rifiuta_lin, z_garch22_pvalue_lin] = archtest(z_garch22_lin, 'Lags', 15);
+
+%Previsioni a 3 settimane LIN
+h = 3; 
+[y_f, e_f ,v_f_lin] = forecast(garch_stima_lin,h,'Y0',y_lin);
+sigma_f_lin = sqrt(v_f_lin);
+sigma_hist = sigma_garch_lin; 
+plot_obs = 50; 
+figure('Name', 'Previsioni LIN 3 settimane', 'NumberTitle', 'off');
+plot(sigma_hist(end-plot_obs:end), 'LineWidth', 2.5)
+hold on
+plot([sigma_hist(end-plot_obs:end); sigma_f_lin], 'LineWidth', 2.5)
+hold off
+xline(plot_obs)
+xlim([0 plot_obs+h])
+title("Previsioni a 3 settimane LIN")
+
+disp('************************************************************')
+disp('************************************************************')
+disp('************************************************************')
+figure('Name', 'Modelli di Volatilità TOELY', 'NumberTitle', 'off');
+disp('Modelli di Volatilita TOELY')
+
+% Stimiamo un AR(1)-ARCH(1) TOELY 
+disp('Modello ARCH(1) TOELY')
+y_toely = toely;
+arch_mod_toely = arima('ARLags', 1, 'Variance', garch(0,1));
+arch_stima_toely = estimate(arch_mod_toely, y_toely, 'Display','off');
+summarize(arch_stima_toely);
+[res_arch_toely, sigma2_arch_toely] = infer(arch_stima_toely, y_toely); 
+sigma_arch_toely = sqrt(sigma2_arch_toely);
+subplot(3,2,1)
+plot(data, sigma_arch_toely, 'Color', 'red') 
+title("ARCH(1) Volatility - TOELY")
+z_arch_toely = res_arch_toely ./ sigma_arch_toely;
+[z_arch_rifiuta_toely, z_arch_pvalue_toely] = archtest(z_arch_toely, 'Lags', 15);
+
+%Stimiamo un AR(1)-ARCH(2) TOELY
+disp('Modello ARCH(2) TOELY')
+arch2_mod_toely = arima('ARLags', 1, 'Variance', garch(0,2));
+arch2_stima_toely = estimate(arch2_mod_toely, y_toely, "Display", "off");
+summarize(arch2_stima_toely);
+[res_arch2_toely, sigma2_arch2_toely] = infer(arch2_stima_toely, y_toely); 
+sigma_arch2_toely = sqrt(sigma2_arch2_toely);
+subplot(3,2,2)
+plot(data, sigma_arch2_toely, 'Color', 'red')
+title("ARCH(2) TOELY")
+z_arch2_toely = res_arch2_toely ./ sigma_arch2_toely;
+[z_arch2_rifiuta_toely, z_arch2_pvalue_toely] = archtest(z_arch2_toely, 'Lags', 15);
+
+disp('Modello GARCH(1,1) TOELY')
+% --- Stimiamo un AR(1)-GARCH(1,1) TOELY ---
+garch_mod_toely = arima('ARLags', 1, 'Variance', garch(1,1));
+garch_stima_toely = estimate(garch_mod_toely, y_toely, "Display", "off");
+summarize(garch_stima_toely);
+% Salviamo residui e volatilità
+[res_garch_toely, sigma2_garch_toely] = infer(garch_stima_toely, y_toely);
+sigma_garch_toely = sqrt(sigma2_garch_toely);
+% Grafico GARCH(1,1) (posizione 3 su 6)
+subplot(3,2,3)
+plot(data, sigma_garch_toely, 'Color', 'red')
+title("GARCH(1,1) TOELY")
+% Validazione: test ARCH sui residui standardizzati 
+z_garch_toely = res_garch_toely ./ sigma_garch_toely;
+[z_garch_rifiuta_toely, z_garch_pvalue_toely] = archtest(z_garch_toely, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(1,2) TOELY
+disp('Modello GARCH(1,2) TOELY')
+garch12_mod_toely = arima('ARLags', 1, 'Variance', garch(1,2));
+garch12_stima_toely = estimate(garch12_mod_toely, y_toely, "Display", "off");
+summarize(garch12_stima_toely);
+[res_garch12_toely, sigma2_garch12_toely] = infer(garch12_stima_toely, y_toely);
+sigma_garch12_toely = sqrt(sigma2_garch12_toely);
+subplot(3,2,4)
+plot(data, sigma_garch12_toely, 'Color', 'red')
+title("GARCH(1,2) TOELY")
+z_garch12_toely = res_garch12_toely ./ sigma_garch12_toely;
+[z_garch12_rifiuta_toely, z_garch12_pvalue_toely] = archtest(z_garch12_toely, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(2,1) TOELY
+disp('Modello GARCH(2,1) TOELY')
+garch21_mod_toely = arima('ARLags', 1, 'Variance', garch(2,1));
+garch21_stima_toely = estimate(garch21_mod_toely, y_toely, "Display", "off");
+summarize(garch21_stima_toely);
+[res_garch21_toely, sigma2_garch21_toely] = infer(garch21_stima_toely, y_toely);
+sigma_garch21_toely = sqrt(sigma2_garch21_toely);
+subplot(3,2,5)
+plot(data, sigma_garch21_toely, 'Color', 'red')
+title("GARCH(2,1) TOELY")
+z_garch21_toely = res_garch21_toely ./ sigma_garch21_toely;
+[z_garch21_rifiuta_toely, z_garch21_pvalue_toely] = archtest(z_garch21_toely, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(2,2) TOELY
+disp('Modello GARCH(2,2) TOELY')
+garch22_mod_toely = arima('ARLags', 1, 'Variance', garch(2,2));
+garch22_stima_toely = estimate(garch22_mod_toely, y_toely, "Display", "off");
+summarize(garch22_stima_toely);
+[res_garch22_toely, sigma2_garch22_toely] = infer(garch22_stima_toely, y_toely);
+sigma_garch22_toely = sqrt(sigma2_garch22_toely);
+subplot(3,2,6)
+plot(data, sigma_garch22_toely, 'Color', 'red')
+title("GARCH(2,2) TOELY")
+z_garch22_toely = res_garch22_toely ./ sigma_garch22_toely;
+[z_garch22_rifiuta_toely, z_garch22_pvalue_toely] = archtest(z_garch22_toely, 'Lags', 15);
+
+%Previsioni a 3 settimane
+h = 3;
+[y_f, e_f ,v_f_toely] = forecast(garch_stima_toely,h,'Y0',y_toely);
+sigma_f_toely = sqrt(v_f_toely);
+sigma_hist = sigma_garch_toely; 
+plot_obs = 50;
+figure('Name', 'Previsioni TOELY 3 settimane', 'NumberTitle', 'off');
+plot(sigma_hist(end-plot_obs:end), 'LineWidth', 2.5)
+hold on
+plot([sigma_hist(end-plot_obs:end); sigma_f_toely], 'LineWidth', 2.5)
+hold off
+xline(plot_obs)
+xlim([0 plot_obs+h])
+title("Previsioni a 3 settimane TOELY")
+
+disp('************************************************************')
+disp('************************************************************')
+disp('************************************************************')
+figure('Name', 'Modelli di Volatilità SSNLF', 'NumberTitle', 'off');
+disp('Modelli di Volatilita SSNLF')
+
+% Stimiamo un AR(1)-ARCH(1) SSNLF
+disp('Modello ARCH(1) SSNLF')
+y_ssnlf=ssnlf;
+arch_mod_ssnlf = arima('ARLags', 1, 'Variance', garch(0,1));
+arch_stima_ssnlf = estimate(arch_mod_ssnlf,y_ssnlf, 'Display','off');
+summarize(arch_stima_ssnlf);
+[res_arch_ssnlf, sigma2_arch_ssnlf] = infer(arch_stima_ssnlf,y_ssnlf); 
+sigma_arch_ssnlf = sqrt(sigma2_arch_ssnlf);
+subplot(3,2,1)
+plot(data,sigma_arch_ssnlf, 'Color', 'red')
+title("Arch(1) SSNLF")
+z_arch_ssnlf = res_arch_ssnlf./sigma_arch_ssnlf;
+[z_arch_rifiuta_ssnlf, z_arch_pvalue_ssnlf] = archtest(z_arch_ssnlf, 'Lags', 15);
+
+% Stimiamo un AR(1)-ARCH(2) SSNLF
+disp('Modello ARCH(2) SSNLF')
+y_ssnlf=ssnlf;
+arch2_mod_ssnlf = arima('ARLags', 1, 'Variance', garch(0,2));
+arch2_stima_ssnlf = estimate(arch2_mod_ssnlf,y_ssnlf, "Display","off");
+summarize(arch2_stima_ssnlf);
+[res_arch2_ssnlf, sigma2_arch2_ssnlf] = infer(arch2_stima_ssnlf,y_ssnlf); 
+sigma_arch2_ssnlf = sqrt(sigma2_arch2_ssnlf);
+subplot(3,2,2)
+plot(data,sigma_arch2_ssnlf, 'Color', 'red')
+title("Arch(2) SSNLF")
+z_arch2_ssnlf = res_arch2_ssnlf./sigma_arch2_ssnlf;
+[z_arch2_rifiuta_ssnlf, z_arch2_pvalue_ssnlf] = archtest(z_arch2_ssnlf, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(1,1) SSNLF
+disp('Modello GARCH(1,1) SSNLF')
+garch_mod_ssnlf= arima('ARLags', 1, 'Variance', garch(1,1));
+garch_stima_ssnlf = estimate(garch_mod_ssnlf,y_ssnlf, "Display","off");
+summarize(garch_stima_ssnlf);
+[res_garch_ssnlf, sigma2_garch_ssnlf] = infer(garch_stima_ssnlf,y_ssnlf);
+sigma_garch_ssnlf = sqrt(sigma2_garch_ssnlf);
+subplot(3,2,3)
+plot(data,sigma_garch_ssnlf, 'Color', 'red')
+title("Garch(1,1) SSNLF")
+z_garch_ssnlf = res_garch_ssnlf./sigma_garch_ssnlf;
+[z_garch_rifiuta_ssnlf, z_garch_pvalue_ssnlf] = archtest(z_garch_ssnlf, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(1,2) SSNLF
+disp('Modello GARCH(1,2) SSNLF')
+garch12_mod_ssnlf = arima('ARLags', 1, 'Variance', garch(1,2));
+garch12_stima_ssnlf = estimate(garch12_mod_ssnlf,y_ssnlf, "Display","off");
+summarize(garch12_stima_ssnlf);
+[res_garch12_ssnlf, sigma2_garch12_ssnlf] = infer(garch12_stima_ssnlf,y_ssnlf);
+sigma_garch12_ssnlf = sqrt(sigma2_garch12_ssnlf);
+subplot(3,2,4)
+plot(data,sigma_garch12_ssnlf, 'Color', 'red')
+title("Garch(1,2) SSNLF")
+z_garch12_ssnlf = res_garch12_ssnlf./sigma_garch12_ssnlf;
+[z_garch12_rifiuta_ssnlf, z_garch12_pvalue_ssnlf] = archtest(z_garch12_ssnlf, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(2,1) SSNLF
+disp('Modello GARCH(2,1) SSNLF')
+garch21_mod_ssnlf = arima('ARLags', 1, 'Variance', garch(2,1));
+garch21_stima_ssnlf = estimate(garch21_mod_ssnlf,y_ssnlf, "Display","off");
+summarize(garch21_stima_ssnlf);
+[res_garch21_ssnlf, sigma2_garch21_ssnlf] = infer(garch21_stima_ssnlf,y_ssnlf);
+sigma_garch21_ssnlf = sqrt(sigma2_garch21_ssnlf);
+subplot(3,2,5)
+plot(data,sigma_garch21_ssnlf, 'Color', 'red')
+title("Garch(2,1) SSNLF")
+z_garch21_ssnlf = res_garch21_ssnlf./sigma_garch21_ssnlf;
+[z_garch21_rifiuta_ssnlf, z_garch21_pvalue_ssnlf] = archtest(z_garch21_ssnlf, 'Lags', 15);
+
+% Stimiamo un AR(1)-GARCH(2,2) SSNLF
+disp('Modello GARCH(2,2) SSNLF')
+garch22_mod_ssnlf = arima('ARLags', 1, 'Variance', garch(2,2));
+garch22_stima_ssnlf = estimate(garch22_mod_ssnlf,y_ssnlf, "Display","off");
+summarize(garch22_stima_ssnlf);
+[res_garch22_ssnlf, sigma2_garch22_ssnlf] = infer(garch22_stima_ssnlf,y_ssnlf);
+sigma_garch22_ssnlf = sqrt(sigma2_garch22_ssnlf);
+subplot(3,2,6)
+plot(data,sigma_garch22_ssnlf, 'Color', 'red')
+title("Garch(2,2) SSNLF")
+z_garch22_ssnlf = res_garch22_ssnlf./sigma_garch22_ssnlf;
+[z_garch22_rifiuta_ssnlf, z_garch22_pvalue_ssnlf] = archtest(z_garch22_ssnlf, 'Lags', 15);
+
+%Previsioni a 3 settimane
+h = 3;
+[y_f, e_f ,v_f_ssnlf] = forecast(garch_stima_ssnlf,h,'Y0',y_ssnlf);
+sigma_f_ssnlf = sqrt(v_f_ssnlf);
+sigma_hist = sigma_garch_ssnlf; 
+plot_obs = 50;
+figure('Name', 'Previsioni SSNLF 3 settimane', 'NumberTitle', 'off');
+plot(sigma_hist(end-plot_obs:end), 'LineWidth', 2.5)
+hold on
+plot([sigma_hist(end-plot_obs:end); sigma_f_ssnlf], 'LineWidth', 2.5)
+hold off
+xline(plot_obs)
+xlim([0 plot_obs+h])
+title("Previsioni a 3 settimane SSNLF") 
+
+disp('************************************************************')
+disp('Modello VAR e Ordine Cholesky ')
+disp('************************************************************')
+%IRF
+% Ordine di Cholesky basato sulla catena di fornitura:
+% Linde (LIN, materiali base) -> Tokyo Electron (TOELY, attrezzature) -> Samsung Electronics (SSNLF, prodotto finale)
+y = [lin toely ssnlf];
+n = size(y,2);   
+p = 1;           
+obs = size(y,1);
+
+Y = y(p+1:end,:);
+X = y(p:obs-1,:);
+for i=1:p-1
+    X = [X y(p-i:obs-i-1,:)];
+end
+X = [ones(obs-p,1) X];
+
+T = obs-p;
+A = (X'*X)^(-1)*X'*Y;
+E = Y - X*A;
+Sigma = E'*E/T;
+A = A(2:n*p+1,:); 
+A = [A'; eye((p-1)*n) zeros((p-1)*n,n)];
+
+% orizzonte temporale
+H = 16; 
+J = [eye(n,n) zeros(n,n*(p-1))]; 
+P = chol(Sigma)'; 
+IRF = reshape(J*A^0*J'*P, n^2, 1); 
+
+for i=1:H
+    IRF = [IRF reshape(J*A^i*J'*P, n^2, 1)];
+end
+h_plot = 0:H;
+
+figure('Name', 'Funzioni di Risposta all Impulso (IRF)', 'NumberTitle', 'off');
+
+% Risposta di LIN allo shock di LIN
+subplot(3,3,1)
+plot(h_plot, IRF(1,:), 'red', 'LineWidth', 2);
+title('Risp. LIN a Shock LIN')
+ylabel('IRF LIN')
+xlim([0 H])
+yline(0)
+
+% Risposta di TOELY allo shock di LIN 
+subplot(3,3,4)
+plot(h_plot, IRF(2,:), 'red', 'LineWidth', 2);
+title('Risp. TOELY a Shock LIN')
+ylabel('IRF TOELY')
+xlim([0 H])
+yline(0)
+
+% Risposta di SSNLF allo shock di LIN
+subplot(3,3,7)
+plot(h_plot, IRF(3,:), 'red', 'LineWidth', 2);
+title('Risp. SSNLF a Shock LIN')
+ylabel('IRF SSNLF')
+xlabel('Orizzonte (Settimane)')
+xlim([0 H])
+yline(0)
+
+% Risposta di LIN allo shock di TOELY 
+subplot(3,3,2)
+plot(h_plot, IRF(4,:), 'red', 'LineWidth', 2);
+title('Risp. LIN a Shock TOELY')
+xlim([0 H])
+yline(0)
+
+% Risposta di TOELY allo shock di TOELY 
+subplot(3,3,5)
+plot(h_plot, IRF(5,:), 'red', 'LineWidth', 2);
+title('Risp. TOELY a Shock TOELY')
+xlim([0 H])
+yline(0)
+
+% Risposta di SSNLF allo shock di TOELY
+subplot(3,3,8)
+plot(h_plot, IRF(6,:), 'red', 'LineWidth', 2);
+title('Risp. SSNLF a Shock TOELY')
+xlabel('Orizzonte (Settimane)')
+xlim([0 H])
+yline(0)
+
+% Risposta di LIN allo shock di SSNLF
+subplot(3,3,3)
+plot(h_plot, IRF(7,:), 'red', 'LineWidth', 2);
+title('Risp. LIN a Shock SSNLF')
+xlim([0 H])
+yline(0)
+
+% Risposta di TOELY allo shock di SSNLF 
+subplot(3,3,6)
+plot(h_plot, IRF(8,:), 'red', 'LineWidth', 2);
+title('Risp. TOELY a Shock SSNLF')
+xlim([0 H])
+yline(0)
+
+% Risposta di SSNLF allo shock di SSNLF
+subplot(3,3,9)
+plot(h_plot, IRF(9,:), 'red', 'LineWidth', 2);
+title('Risp. SSNLF a Shock SSNLF')
+xlabel('Orizzonte (Settimane)')
+xlim([0 H])
+yline(0)
+
+
+disp('************************************************************')
+disp('Stima modelli ARCH/GARCH sugli shock del VAR')
+disp('************************************************************')
+shock_lin = E(:, 1);
+shock_toely  = E(:, 2);
+shock_ssnlf = E(:, 3);
+h = 3; 
+plot_obs = 50; 
+
+% Stimiamo un ARCH(1) Shock LIN
+disp('Modello ARCH(1) Shock LIN')
+arch_mod_sh_lin = arima('Constant', 0, 'Variance', garch(0,1));
+arch_stima_sh_lin = estimate(arch_mod_sh_lin, shock_lin, "Display","off");
+summarize(arch_stima_sh_lin);
+[res_arch_sh_lin, sigma2_arch_sh_lin] = infer(arch_stima_sh_lin, shock_lin);
+sigma_arch_sh_lin = sqrt(sigma2_arch_sh_lin);
+z_arch_sh_lin = res_arch_sh_lin ./ sigma_arch_sh_lin;
+[z_arch_rifiuta_sh_lin, z_arch_pvalue_sh_lin] = archtest(z_arch_sh_lin, 'Lags', 15);
+
+% Stimiamo un ARCH(2) Shock LIN
+disp('Modello ARCH(2) Shock LIN')
+arch2_mod_sh_lin = arima('Constant', 0, 'Variance', garch(0,2));
+arch2_stima_sh_lin = estimate(arch2_mod_sh_lin, shock_lin, "Display","off");
+summarize(arch2_stima_sh_lin);
+[res_arch2_sh_lin, sigma2_arch2_sh_lin] = infer(arch2_stima_sh_lin, shock_lin);
+sigma_arch2_sh_lin = sqrt(sigma2_arch2_sh_lin);
+z_arch2_sh_lin = res_arch2_sh_lin ./ sigma_arch2_sh_lin;
+[z_arch2_rifiuta_sh_lin, z_arch2_pvalue_sh_lin] = archtest(z_arch2_sh_lin, 'Lags', 15);
+
+% Stimiamo un GARCH(1,1) Shock LIN
+disp('Modello GARCH(1,1) Shock LIN')
+garch_mod_sh_lin = arima('Constant', 0, 'Variance', garch(1,1));
+garch_stima_sh_lin = estimate(garch_mod_sh_lin, shock_lin, "Display","off");
+summarize(garch_stima_sh_lin);
+[res_garch_sh_lin, sigma2_garch_sh_lin] = infer(garch_stima_sh_lin, shock_lin);
+sigma_garch_sh_lin = sqrt(sigma2_garch_sh_lin);
+z_garch_sh_lin = res_garch_sh_lin ./ sigma_garch_sh_lin;
+[z_garch_rifiuta_sh_lin, z_garch_pvalue_sh_lin] = archtest(z_garch_sh_lin, 'Lags', 15);
+
+% Stimiamo un GARCH(1,2) Shock LIN
+disp('Modello GARCH(1,2) Shock LIN')
+garch12_mod_sh_lin = arima('Constant', 0, 'Variance', garch(1,2));
+garch12_stima_sh_lin = estimate(garch12_mod_sh_lin, shock_lin, "Display","off");
+summarize(garch12_stima_sh_lin);
+[res_garch12_sh_lin, sigma2_garch12_sh_lin] = infer(garch12_stima_sh_lin, shock_lin);
+sigma_garch12_sh_lin = sqrt(sigma2_garch12_sh_lin);
+z_garch12_sh_lin = res_garch12_sh_lin ./ sigma_garch12_sh_lin;
+[z_garch12_rifiuta_sh_lin, z_garch12_pvalue_sh_lin] = archtest(z_garch12_sh_lin, 'Lags', 15);
+
+% Stimiamo un GARCH(2,1) Shock LIN
+disp('Modello GARCH(2,1) Shock LIN')
+garch21_mod_sh_lin = arima('Constant', 0, 'Variance', garch(2,1));
+garch21_stima_sh_lin = estimate(garch21_mod_sh_lin, shock_lin, "Display","off");
+summarize(garch21_stima_sh_lin);
+[res_garch21_sh_lin, sigma2_garch21_sh_lin] = infer(garch21_stima_sh_lin, shock_lin);
+sigma_garch21_sh_lin = sqrt(sigma2_garch21_sh_lin);
+z_garch21_sh_lin = res_garch21_sh_lin ./ sigma_garch21_sh_lin;
+[z_garch21_rifiuta_sh_lin, z_garch21_pvalue_sh_lin] = archtest(z_garch21_sh_lin, 'Lags', 15);
+
+% Stimiamo un GARCH(2,2) Shock LIN
+disp('Modello GARCH(2,2) Shock LIN')
+garch22_mod_sh_lin = arima('Constant', 0, 'Variance', garch(2,2));
+garch22_stima_sh_lin = estimate(garch22_mod_sh_lin, shock_lin, "Display","off");
+summarize(garch22_stima_sh_lin);
+[res_garch22_sh_lin, sigma2_garch22_sh_lin] = infer(garch22_stima_sh_lin, shock_lin);
+sigma_garch22_sh_lin = sqrt(sigma2_garch22_sh_lin);
+z_garch22_sh_lin = res_garch22_sh_lin ./ sigma_garch22_sh_lin;
+[z_garch22_rifiuta_sh_lin, z_garch22_pvalue_sh_lin] = archtest(z_garch22_sh_lin, 'Lags', 15);
+
+%USIAMO IL GARCH(1, 1) PERCHE PRESENTA UN BIC INFERIORE RISPETTO A TUTTI ALTRI
+[res_garch_sh_lin, sigma2_garch_sh_lin] = infer(garch_stima_sh_lin, shock_lin);
+sigma_garch_sh_lin = sqrt(sigma2_garch_sh_lin);
+
+% Previsioni a 3 settimane 
+[y_f, e_f, v_f_sh_lin] = forecast(garch_stima_sh_lin, h, 'Y0', shock_lin);
+sigma_f_sh_lin = sqrt(v_f_sh_lin);
+sigma_hist_lin = sigma_garch_sh_lin; 
+figure('Name', 'Previsioni a 3 settimane Volatilità SHOCK LIN', 'NumberTitle', 'off');
+plot(sigma_hist_lin(end-plot_obs:end), 'LineWidth', 2.5)
+hold on
+plot([sigma_hist_lin(end-plot_obs:end); sigma_f_sh_lin], 'LineWidth', 2.5)
+hold off
+xline(plot_obs)
+xlim([0 plot_obs+h])
+title('Previsioni a 3 settimane Volatilità SHOCK LIN')
+
+disp('************************************************************')
+disp('************************************************************')
+disp('************************************************************')
+
+% Stimiamo un ARCH(1) Shock TOELY
+disp('Modello ARCH(1) Shock TOELY')
+arch_mod_sh_toely = arima('Constant', 0, 'Variance', garch(0,1));
+arch_stima_sh_toely = estimate(arch_mod_sh_toely, shock_toely, "Display","off");
+summarize(arch_stima_sh_toely);
+[res_arch_sh_toely, sigma2_arch_sh_toely] = infer(arch_stima_sh_toely, shock_toely);
+sigma_arch_sh_toely = sqrt(sigma2_arch_sh_toely);
+z_arch_sh_toely = res_arch_sh_toely ./ sigma_arch_sh_toely;
+[z_arch_rifiuta_sh_toely, z_arch_pvalue_sh_toely] = archtest(z_arch_sh_toely, 'Lags', 15);
+
+% Stimiamo un ARCH(2) Shock TOELY
+disp('Modello ARCH(2) Shock TOELY')
+arch2_mod_sh_toely = arima('Constant', 0, 'Variance', garch(0,2));
+arch2_stima_sh_toely = estimate(arch2_mod_sh_toely, shock_toely, "Display","off");
+summarize(arch2_stima_sh_toely);
+[res_arch2_sh_toely, sigma2_arch2_sh_toely] = infer(arch2_stima_sh_toely, shock_toely);
+sigma_arch2_sh_toely = sqrt(sigma2_arch2_sh_toely);
+z_arch2_sh_toely = res_arch2_sh_toely ./ sigma_arch2_sh_toely;
+[z_arch2_rifiuta_sh_toely, z_arch2_pvalue_sh_toely] = archtest(z_arch2_sh_toely, 'Lags', 15);
+
+% Stimiamo un GARCH(1,1) Shock TOELY
+disp('Modello GARCH(1,1) Shock TOELY')
+garch_mod_sh_toely = arima('Constant', 0, 'Variance', garch(1,1));
+garch_stima_sh_toely = estimate(garch_mod_sh_toely, shock_toely, "Display","off");
+summarize(garch_stima_sh_toely);
+[res_garch_sh_toely, sigma2_garch_sh_toely] = infer(garch_stima_sh_toely, shock_toely);
+sigma_garch_sh_toely = sqrt(sigma2_garch_sh_toely);
+z_garch_sh_toely = res_garch_sh_toely ./ sigma_garch_sh_toely;
+[z_garch_rifiuta_sh_toely, z_garch_pvalue_sh_toely] = archtest(z_garch_sh_toely, 'Lags', 15);
+
+% Stimiamo un GARCH(1,2) Shock TOELY
+disp('Modello GARCH(1,2) Shock TOELY')
+garch12_mod_sh_toely = arima('Constant', 0, 'Variance', garch(1,2));
+garch12_stima_sh_toely = estimate(garch12_mod_sh_toely, shock_toely, "Display","off");
+summarize(garch12_stima_sh_toely);
+[res_garch12_sh_toely, sigma2_garch12_sh_toely] = infer(garch12_stima_sh_toely, shock_toely);
+sigma_garch12_sh_toely = sqrt(sigma2_garch12_sh_toely);
+z_garch12_sh_toely = res_garch12_sh_toely ./ sigma_garch12_sh_toely;
+[z_garch12_rifiuta_sh_toely, z_garch12_pvalue_sh_toely] = archtest(z_garch12_sh_toely, 'Lags', 15);
+
+% Stimiamo un GARCH(2,1) Shock TOELY
+disp('Modello GARCH(2,1) Shock TOELY')
+garch21_mod_sh_toely = arima('Constant', 0, 'Variance', garch(2,1));
+garch21_stima_sh_toely = estimate(garch21_mod_sh_toely, shock_toely, "Display","off");
+summarize(garch21_stima_sh_toely);
+[res_garch21_sh_toely, sigma2_garch21_sh_toely] = infer(garch21_stima_sh_toely, shock_toely);
+sigma_garch21_sh_toely = sqrt(sigma2_garch21_sh_toely);
+z_garch21_sh_toely = res_garch21_sh_toely ./ sigma_garch21_sh_toely;
+[z_garch21_rifiuta_sh_toely, z_garch21_pvalue_sh_toely] = archtest(z_garch21_sh_toely, 'Lags', 15);
+
+% Stimiamo un GARCH(2,2) Shock TOELY
+disp('Modello GARCH(2,2) Shock TOELY')
+garch22_mod_sh_toely = arima('Constant', 0, 'Variance', garch(2,2));
+garch22_stima_sh_toely = estimate(garch22_mod_sh_toely, shock_toely, "Display","off");
+summarize(garch22_stima_sh_toely);
+[res_garch22_sh_toely, sigma2_garch22_sh_toely] = infer(garch22_stima_sh_toely, shock_toely);
+sigma_garch22_sh_toely = sqrt(sigma2_garch22_sh_toely);
+z_garch22_sh_toely = res_garch22_sh_toely ./ sigma_garch22_sh_toely;
+[z_garch22_rifiuta_sh_toely, z_garch22_pvalue_sh_toely] = archtest(z_garch22_sh_toely, 'Lags', 15);
+
+%USIAMO IL GARCH(1, 1) PERCHE PRESENTA UN BIC INFERIORE RISPETTO A TUTTI ALTRI
+[res_garch_sh_toely, sigma2_garch_sh_toely] = infer(garch_stima_sh_toely, shock_toely);
+sigma_garch_sh_toely = sqrt(sigma2_garch_sh_toely);
+
+% Previsioni a 3 settimane
+[y_f, e_f, v_f_sh_toely] = forecast(garch_stima_sh_toely, h, 'Y0', shock_toely);
+sigma_f_sh_toely = sqrt(v_f_sh_toely);
+sigma_hist_toely = sigma_garch_sh_toely; 
+figure('Name', 'Previsioni a 3 settimane Volatilità SHOCK TOELY', 'NumberTitle', 'off');
+plot(sigma_hist_toely(end-plot_obs:end), 'LineWidth', 2.5)
+hold on
+plot([sigma_hist_toely(end-plot_obs:end); sigma_f_sh_toely], 'LineWidth', 2.5)
+hold off
+xline(plot_obs)
+xlim([0 plot_obs+h])
+title('Previsioni a 3 settimane Volatilità SHOCK TOELY')
+
+disp('************************************************************')
+disp('************************************************************')
+disp('************************************************************')
+
+% Stimiamo un ARCH(1) Shock SSNLF
+disp('Modello ARCH(1) Shock SSNLF')
+arch_mod_sh_ssnlf = arima('Constant', 0, 'Variance', garch(0,1));
+arch_stima_sh_ssnlf = estimate(arch_mod_sh_ssnlf, shock_ssnlf, "Display","off");
+summarize(arch_stima_sh_ssnlf);
+[res_arch_sh_ssnlf, sigma2_arch_sh_ssnlf] = infer(arch_stima_sh_ssnlf, shock_ssnlf);
+sigma_arch_sh_ssnlf = sqrt(sigma2_arch_sh_ssnlf);
+z_arch_sh_ssnlf = res_arch_sh_ssnlf ./ sigma_arch_sh_ssnlf;
+[z_arch_rifiuta_sh_ssnlf, z_arch_pvalue_sh_ssnlf] = archtest(z_arch_sh_ssnlf, 'Lags', 15);
+
+% Stimiamo un ARCH(2) Shock SSNLF
+disp('Modello ARCH(2) Shock SSNLF')
+arch2_mod_sh_ssnlf = arima('Constant', 0, 'Variance', garch(0,2));
+arch2_stima_sh_ssnlf = estimate(arch2_mod_sh_ssnlf, shock_ssnlf, "Display","off");
+summarize(arch2_stima_sh_ssnlf);
+[res_arch2_sh_ssnlf, sigma2_arch2_sh_ssnlf] = infer(arch2_stima_sh_ssnlf, shock_ssnlf);
+sigma_arch2_sh_ssnlf = sqrt(sigma2_arch2_sh_ssnlf);
+z_arch2_sh_ssnlf = res_arch2_sh_ssnlf ./ sigma_arch2_sh_ssnlf;
+[z_arch2_rifiuta_sh_ssnlf, z_arch2_pvalue_sh_ssnlf] = archtest(z_arch2_sh_ssnlf, 'Lags', 15);
+
+% Stimiamo un GARCH(1,1) Shock SSNLF
+disp('Modello GARCH(1,1) Shock SSNLF')
+garch_mod_sh_ssnlf = arima('Constant', 0, 'Variance', garch(1,1));
+garch_stima_sh_ssnlf = estimate(garch_mod_sh_ssnlf, shock_ssnlf, "Display","off");
+summarize(garch_stima_sh_ssnlf);
+[res_garch_sh_ssnlf, sigma2_garch_sh_ssnlf] = infer(garch_stima_sh_ssnlf, shock_ssnlf);
+sigma_garch_sh_ssnlf = sqrt(sigma2_garch_sh_ssnlf);
+z_garch_sh_ssnlf = res_garch_sh_ssnlf ./ sigma_garch_sh_ssnlf;
+[z_garch_rifiuta_sh_ssnlf, z_arch_pvalue_sh_ssnlf] = archtest(z_garch_sh_ssnlf, 'Lags', 15);
+
+% Stimiamo un GARCH(1,2) Shock SSNLF
+disp('Modello GARCH(1,2) Shock SSNLF')
+garch12_mod_sh_ssnlf = arima('Constant', 0, 'Variance', garch(1,2));
+garch12_stima_sh_ssnlf = estimate(garch12_mod_sh_ssnlf, shock_ssnlf, "Display","off");
+summarize(garch12_stima_sh_ssnlf);
+[res_garch12_sh_ssnlf, sigma2_garch12_sh_ssnlf] = infer(garch12_stima_sh_ssnlf, shock_ssnlf);
+sigma_garch12_sh_ssnlf = sqrt(sigma2_garch12_sh_ssnlf);
+z_garch12_sh_ssnlf = res_garch12_sh_ssnlf ./ sigma_garch12_sh_ssnlf;
+[z_garch12_rifiuta_sh_ssnlf, z_garch12_pvalue_sh_ssnlf] = archtest(z_garch12_sh_ssnlf, 'Lags', 15);
+
+% Stimiamo un GARCH(2,1) Shock SSNLF
+disp('Modello GARCH(2,1) Shock SSNLF')
+garch21_mod_sh_ssnlf = arima('Constant', 0, 'Variance', garch(2,1));
+garch21_stima_sh_ssnlf = estimate(garch21_mod_sh_ssnlf, shock_ssnlf, "Display","off");
+summarize(garch21_stima_sh_ssnlf);
+[res_garch21_sh_ssnlf, sigma2_garch21_sh_ssnlf] = infer(garch21_stima_sh_ssnlf, shock_ssnlf);
+sigma_garch21_sh_ssnlf = sqrt(sigma2_garch21_sh_ssnlf);
+z_garch21_sh_ssnlf = res_garch21_sh_ssnlf ./ sigma_garch21_sh_ssnlf;
+[z_garch21_rifiuta_sh_ssnlf, z_garch21_pvalue_sh_ssnlf] = archtest(z_garch21_sh_ssnlf, 'Lags', 15);
+
+% Stimiamo un GARCH(2,2) Shock SSNLF
+disp('Modello GARCH(2,2) Shock SSNLF')
+garch22_mod_sh_ssnlf = arima('Constant', 0, 'Variance', garch(2,2));
+garch22_stima_sh_ssnlf = estimate(garch22_mod_sh_ssnlf, shock_ssnlf, "Display","off");
+summarize(garch22_stima_sh_ssnlf);
+[res_garch22_sh_ssnlf, sigma2_garch22_sh_ssnlf] = infer(garch22_stima_sh_ssnlf, shock_ssnlf);
+sigma_garch22_sh_ssnlf = sqrt(sigma2_garch22_sh_ssnlf);
+z_garch22_sh_ssnlf = res_garch22_sh_ssnlf ./ sigma_garch22_sh_ssnlf;
+[z_garch22_rifiuta_sh_ssnlf, z_garch22_pvalue_sh_ssnlf] = archtest(z_garch22_sh_ssnlf, 'Lags', 15);
+
+%USIAMO IL GARCH(1, 1) PERCHE PRESENTA UN BIC INFERIORE RISPETTO A TUTTI ALTRI
+[res_garch_sh_ssnlf, sigma2_garch_sh_ssnlf] = infer(garch_stima_sh_ssnlf, shock_ssnlf);
+sigma_garch_sh_ssnlf = sqrt(sigma2_garch_sh_ssnlf);
+
+% Previsioni a 3 settimane
+[y_f, e_f, v_f_sh_ssnlf] = forecast(garch_stima_sh_ssnlf, h, 'Y0', shock_ssnlf);
+sigma_f_sh_ssnlf = sqrt(v_f_sh_ssnlf);
+sigma_hist_ssnlf = sigma_garch_sh_ssnlf; 
+figure('Name', 'Previsioni a 3 settimane Volatilità SHOCK SSNLF', 'NumberTitle', 'off');
+plot(sigma_hist_ssnlf(end-plot_obs:end), 'LineWidth', 2.5)
+hold on
+plot([sigma_hist_ssnlf(end-plot_obs:end); sigma_f_sh_ssnlf], 'LineWidth', 2.5)
+hold off
+xline(plot_obs)
+xlim([0 plot_obs+h])
+title('Previsioni a 3 settimane Volatilità SHOCK SSNLF')
+
+disp('************************************************************')
+disp('Stima VaR')
+disp('************************************************************')
+pesi = [1/3, 1/3, 1/3];
+alpha = 0.95;
+W = 300;
+
+% Approccio Univariato
+rendimenti = [lin, toely, ssnlf];
+corr_rend = corrcoef(rendimenti); 
+sigma_t1 = [sigma_f_lin(1), sigma_f_toely(1), sigma_f_ssnlf(1)];
+D = diag(sigma_t1);    
+Sigma_cond = D * corr_rend * D;     
+sigma2_p = pesi * Sigma_cond * pesi';
+sigma_p = sqrt(sigma2_p);
+z = norminv(alpha);        
+VaR_univariato = W * z * (sigma_p/100);
+
+% Calcolo VaR Univariato 
+VaR_uni_usd = VaR_univariato; 
+VaR_uni_perc = (VaR_uni_usd / W) * 100;
+
+% Approccio Multivariato
+corr_shock = corrcoef(E); 
+sigma_t1_shock = [sigma_f_sh_lin(1), sigma_f_sh_toely(1), sigma_f_sh_ssnlf(1)];
+D_shock = diag(sigma_t1_shock);
+Sigma_cond_multi = D_shock * corr_shock * D_shock;
+sigma2_p_multi = pesi * Sigma_cond_multi * pesi';
+sigma_p_multi = sqrt(sigma2_p_multi);
+
+% 5. Calcolo VaR Multivariato
+VaR_multi_usd = W * z * (sigma_p_multi/100);
+VaR_multi_perc = (VaR_multi_usd / W) * 100;
+
+disp('************************************************************')
+disp('Confronto VaR')
+disp('************************************************************')
+disp('Modello Univariato(AR-GARCH)')
+disp('VaR_Dollari:')
+disp(VaR_uni_usd)
+disp('VaR_Percentuale:')
+disp(VaR_uni_perc)
+
+disp('Modello Multivariato (VAR-GARCH)')
+disp('VaR_Dollari:') 
+disp(VaR_multi_usd)
+disp('VaR_Percentuale:')
+disp(VaR_multi_perc)
