@@ -46,9 +46,6 @@ L'ordinamento di Cholesky scelto riflette in modo stringente la struttura della 
 
 L'IRF ci permette di analizzare la direzione, la persistenza e il tempo di riassorbimento dell'effetto di uno shock su una determinata variabile. Applicando questo strumento al nostro modello, si osservano le seguenti dinamiche di trasmissione lungo la catena di fornitura:
 
-![Funzioni di Risposta all'Impulso (IRF) ortogonalizzate (Cholesky) per LIN, TOELY e SSNLF](e0582d83-5504-42b9-a27c-2e04bcfb9c0c.png)
-*(Nota: Assicurati di caricare l'immagine nella stessa cartella del file README su GitHub affinché venga visualizzata correttamente).*
-
 **1. Shock generati da Linde (LIN)**
 * **Impatto su LIN stessa:** Uno shock LIN su LIN mostra un picco altissimo, prossimo a 3.0 alla settimana 0, subendo poi un ritracciamento negativo in area -0.22 alla settimana 1 per poi annullarsi. Il mercato azionario assorbe l'informazione in modo efficiente e rapidissimo.
 * **Impatto su TOELY e SSNLF:** La trasmissione a valle presenta un forte impatto contemporaneo. TOELY registra un balzo esplosivo di oltre 2.0 al tempo 0 (azzerandosi quasi istantaneamente nella settimana 1), mentre SSNLF sale a circa 1.4 al tempo 0, per poi spegnersi linearmente. Questo dimostra come la chimica di base guidi prepotentemente il destino del resto della filiera.
